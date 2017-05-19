@@ -394,8 +394,26 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 		return 1;
 	}
 	
-	double AIC0, AICc0, BIC0, InL0 = BinomialProb(X_size * Y_size, n, double(n)/(X_size * Y_size));
-	AIC0 = AICc0 = BIC0 = -2*InL0; //parameter = 0 for null model
+
+long ni, no;
+long in_total, out_total;
+double p0, pc;
+double at_least_two_data_points;
+at_least_two_data_points = getp0pc(seq2d, x_pos_start, x_pos_end, x_pos_start, x_pos_end, y_pos_start, y_pos_end, y_pos_start, y_pos_end, p0, pc, ni, no, in_total, out_total);
+
+//cout << p0 << "\t" << pc << endl;
+double InL0 = BinomialProb(in_total, ni, pc) + BinomialProb(out_total, no, p0);
+
+//cout << InL_tmp << endl;
+double AIC0  = -2*InL0 + 2*0;			
+double AICc0 = AIC0;
+if (X_size * Y_size-0-1>0.0) AICc0 += 2*0*(0+1)/(X_size * Y_size-0-1);
+else AICc0 = 2*AIC0;//sequence too short, give more penalty
+double BIC0 = -2*InL0 + 0*log(double(X_size * Y_size));
+
+
+	// double AIC0, AICc0, BIC0, InL0 = BinomialProb(X_size * Y_size, n, double(n)/(X_size * Y_size));
+	// AIC0 = AICc0 = BIC0 = -2*InL0; //parameter = 0 for null model
 
 	double InL = InL0;
 	double AIC = AIC0;
@@ -409,8 +427,8 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 	double MIN_cri = 1000000;
 	double para = 4.0;
 
-	  vec_AllModels.clear();
-	  vec_AllModelsFull.clear();
+  	vec_AllModels.clear();
+  	vec_AllModelsFull.clear();
 
 	//cout << "bp2" << endl;
 
@@ -428,6 +446,20 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 					if (y_ce < seq2d.size() - 1 && patient_info[y_ce] == patient_info[y_ce + 1]) {
 						continue;
 					}
+
+					long last_column_count = 0;
+					long j;
+					for (j = y_cs; j < y_ce; ++j) {
+						if (seq2d[j][x_ce] == 0 || seq2d[j][x_ce] == 1) {
+							last_column_count += 1;
+						}
+					}
+
+					if (last_column_count == 0) {
+						continue;
+					}
+
+
 					//cout << "trying a cluster" << endl;
 					//cout << x_cs << "\t" << x_ce << "\t" << y_cs << "\t" << y_ce << endl;
 					//cout << "that was a cluster" << endl;
@@ -439,7 +471,6 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 						if (x_pos_end-x_ce<=1 || x_cs-x_pos_start<=1 || y_pos_end-y_ce<=1 || y_cs-y_pos_start<=1) continue;
 						para = 4.0;
 					}
-
 					long ni, no;
 					long in_total, out_total;
 					double p0, pc;
@@ -458,7 +489,6 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 					if (X_size * Y_size-para-1>0.0) AICc_tmp += 2*para*(para+1)/(X_size * Y_size-para-1);
 					else AICc_tmp = 2*AIC_tmp;//sequence too short, give more penalty
 					double BIC_tmp = -2*InL_tmp + para*log(double(X_size * Y_size));
-					
 					double cri, cri0;
 					if (criterion_type==0) {//BIC
 						cri0 = BIC;
@@ -474,9 +504,9 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 					}
 
 					  //cout<<"cri="<<cri<<";"<<pos_start<<";"<<pos_end<<";"<<cs<<";"<<ce<<";"<<p0<<";"<<pc<<endl;
-					  if (MIN_cri > cri){
-					    MIN_cri = cri;
-					  }
+			  		if (MIN_cri > cri){
+				    	MIN_cri = cri;
+				  	}
 
 
 
@@ -485,11 +515,13 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 					vec_AllModels.push_back(tmp_L);
 					//cout << "adding to vec_models" << endl;
 					  //If there is no cluster, we use this vector to find out the best model except the null model.
-					  CandidateModels tmp_L_full(x_pos_start, x_pos_end, y_pos_start, y_pos_end, x_cs, x_ce, y_cs, y_ce, p0, pc, InL0, InL_tmp, AIC0, AIC_tmp, AICc0, AICc_tmp, BIC0, BIC_tmp);
-					  vec_AllModelsFull.push_back(tmp_L_full);
+				  	CandidateModels tmp_L_full(x_pos_start, x_pos_end, y_pos_start, y_pos_end, x_cs, x_ce, y_cs, y_ce, p0, pc, InL0, InL_tmp, AIC0, AIC_tmp, AICc0, AICc_tmp, BIC0, BIC_tmp);
+				  	vec_AllModelsFull.push_back(tmp_L_full);
 
 					if (cri<cri0) {
-						if (x_cs-x_pos_start>1 && x_pos_end-x_ce>1 && y_cs-y_pos_start>1 && y_pos_end-y_ce>1) {
+
+						if (x_cs-x_pos_start >= 1 || x_pos_end-x_ce >=1 || y_cs-y_pos_start>=1 || y_pos_end-y_ce>=1) {
+							cout << "cri " << cri << " cri0 " << cri0 << endl;
 							//TODO: ask about this
 							//if ( (p0<pc && seq[cs]=='1' && seq[cs-1]=='0' && seq[ce+1]=='0') || (p0>pc && seq[cs]=='0' && seq[cs-1]=='1' && seq[ce+1]=='1') ) {
 							isFound = 1;
@@ -502,23 +534,23 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 							p0_max = p0;
 							pc_max = pc;
 							
-							InL = InL_tmp;
-							AIC = AIC_tmp;
-							AICc = AICc_tmp;
-							BIC = BIC_tmp;
+							// InL = InL_tmp;
+							// AIC = AIC_tmp;
+							// AICc = AICc_tmp;
+							// BIC = BIC_tmp;
 
 
-							cout<<tmp_L.x_pos_start<<" ~ "<<tmp_L.x_pos_end << ", ";
-						   	cout<<tmp_L.y_pos_start<<" ~ "<<tmp_L.y_pos_end;
+							cout<<tmp_L.x_pos_start<<" ~ "<<tmp_L_full.x_pos_end << ", ";
+						   	cout<<tmp_L.y_pos_start<<" ~ "<<tmp_L_full.y_pos_end;
 
-						    cout<<"\tx_cs= "<<tmp_L.x_cs<<"\tx_ce= "<<tmp_L.x_ce << ", ";
-						    cout<<"\ty_cs= "<<tmp_L.y_cs<<"\ty_ce= "<<tmp_L.y_ce;
+						    cout<<"\tx_cs= "<<tmp_L_full.x_cs<<"\tx_ce= "<<tmp_L_full.x_ce << ", ";
+						    cout<<"\ty_cs= "<<tmp_L_full.y_cs<<"\ty_ce= "<<tmp_L_full.y_ce;
 
-						    cout<<"\tp0= "<<tmp_L.p0<<"\tpc= "<<tmp_L.pc;
-						    cout<<"\tInL0= "<<tmp_L.InL0<<"\tInL= "<<tmp_L.InL;
-						    cout<<"\tAIC0= "<<tmp_L.AIC0<<"\tAIC= "<<tmp_L.AIC;
-						    cout<<"\tAICc0= "<<tmp_L.AICc0<<"\tAICc= "<<tmp_L.AICc;
-						    cout<<"\tBIC0= "<<tmp_L.BIC0<<"\tBIC= "<<tmp_L.BIC;
+						    cout<<"\tp0= "<<tmp_L_full.p0<<"\tpc= "<<tmp_L_full.pc;
+						    cout<<"\tInL0= "<<tmp_L_full.InL0<<"\tInL= "<<tmp_L_full.InL;
+						    cout<<"\tAIC0= "<<tmp_L_full.AIC0<<"\tAIC= "<<tmp_L_full.AIC;
+						    cout<<"\tAICc0= "<<tmp_L_full.AICc0<<"\tAICc= "<<tmp_L_full.AICc;
+						    cout<<"\tBIC0= "<<tmp_L_full.BIC0<<"\tBIC= "<<tmp_L_full.BIC;
 						    cout<<endl;
 
 						    long test1, test2;
@@ -554,27 +586,27 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 
 	      //Find out the smallest cri except InL0
 	      //vec_AllModelsFull
-	      long smallest_j=0;
-	      double smallest_cri=100000;
-	      for(long j=0;j<vec_AllModelsFull.size();j++){
-			if(criterion_type==0 && vec_AllModelsFull[j].BIC < smallest_cri && vec_AllModelsFull[j].BIC != BIC){
-			  smallest_cri=vec_AllModelsFull[j].BIC;
-			  smallest_j=j;
-			}else if (criterion_type==1 && vec_AllModelsFull[j].AIC < smallest_cri && vec_AllModelsFull[j].AIC != AIC){
-			  smallest_cri=vec_AllModelsFull[j].AIC;
-			  smallest_j=j;
-			}else if (criterion_type==2 && vec_AllModelsFull[j].AICc < smallest_cri && vec_AllModelsFull[j].AICc != AICc){
-	                  smallest_cri=vec_AllModelsFull[j].AICc;
-	                  smallest_j=j;
-			} 
-	      }
-	      	      	//cout << "bp4.2" << endl;
+	  //     long smallest_j=0;
+	  //     double smallest_cri=100000;
+	  //     for(long j=0;j<vec_AllModelsFull.size();j++){
+			// if(criterion_type==0 && vec_AllModelsFull[j].BIC < smallest_cri && vec_AllModelsFull[j].BIC != BIC){
+			//   smallest_cri=vec_AllModelsFull[j].BIC;
+			//   smallest_j=j;
+			// }else if (criterion_type==1 && vec_AllModelsFull[j].AIC < smallest_cri && vec_AllModelsFull[j].AIC != AIC){
+			//   smallest_cri=vec_AllModelsFull[j].AIC;
+			//   smallest_j=j;
+			// }else if (criterion_type==2 && vec_AllModelsFull[j].AICc < smallest_cri && vec_AllModelsFull[j].AICc != AICc){
+	  //                 smallest_cri=vec_AllModelsFull[j].AICc;
+	  //                 smallest_j=j;
+			// } 
+	  //     }
+	  //     	      	//cout << "bp4.2" << endl;
 
-	      	      	cout << vec_AllModelsFull.size() << endl;
-	      CandidateModels bestmodel=vec_AllModelsFull[smallest_j];
-	      	      	      	//cout << "bp4.21" << endl;
+	  //     	      	//cout << vec_AllModelsFull.size() << endl;
+	  //     CandidateModels bestmodel=vec_AllModelsFull[smallest_j];
+	  //     	      	      	//cout << "bp4.21" << endl;
 
-	      vec_SelectedModels.push_back(bestmodel);
+	  //     vec_SelectedModels.push_back(bestmodel);
 	      	      	      	//cout << "bp4.3" << endl;
 
 	    }
@@ -587,9 +619,39 @@ int Cluster::ClusterSubSeq(vector <double> patient_info, vector <vector <double>
 
 	  	//cout << "bp5" << endl;
 
+ 	long smallest_j=0;
+  double smallest_cri=100000;
+  for(long j=0;j<vec_AllModelsFull.size();j++){
+	if(criterion_type==0 && vec_AllModelsFull[j].BIC < smallest_cri && vec_AllModelsFull[j].BIC != BIC){
+	  smallest_cri=vec_AllModelsFull[j].BIC;
+	  smallest_j=j;
+	}else if (criterion_type==1 && vec_AllModelsFull[j].AIC < smallest_cri && vec_AllModelsFull[j].AIC != AIC){
+	  smallest_cri=vec_AllModelsFull[j].AIC;
+	  smallest_j=j;
+	}else if (criterion_type==2 && vec_AllModelsFull[j].AICc < smallest_cri && vec_AllModelsFull[j].AICc != AICc){
+              smallest_cri=vec_AllModelsFull[j].AICc;
+              smallest_j=j;
+	} 
+  }
+  	      	//cout << "bp4.2" << endl;
 
-	CandidateModels selectedmodel(x_pos_start,x_pos_end,y_pos_start, y_pos_end, x_cs_max,x_ce_max,y_cs_max, y_ce_max,p0_max,pc_max,InL0,InL,AIC0,AIC,AICc0,AICc,BIC0,BIC);
-	vec_SelectedModels.push_back(selectedmodel);
+  	      	cout << vec_AllModelsFull.size() << endl;
+  CandidateModels bestmodel=vec_AllModelsFull[smallest_j];
+  	      	      	//cout << "bp4.21" << endl;
+
+  vec_SelectedModels.push_back(bestmodel);
+
+  x_cs_max = bestmodel.x_cs;
+x_ce_max = bestmodel.x_ce;
+y_cs_max = bestmodel.y_cs;
+y_ce_max = bestmodel.y_ce;
+
+p0_max = bestmodel.p0;
+pc_max = bestmodel.pc;
+
+
+	// CandidateModels selectedmodel(x_pos_start,x_pos_end,y_pos_start, y_pos_end, x_cs_max,x_ce_max,y_cs_max, y_ce_max,p0_max,pc_max,InL0,InL,AIC0,AIC,AICc0,AICc,BIC0,BIC);
+	// vec_SelectedModels.push_back(selectedmodel);
 
 	if (MS_only==0) ModelAveraging(x_pos_start, x_pos_end, y_pos_start, y_pos_end, x_cs_max, x_ce_max, y_cs_max, y_ce_max, p0_max, pc_max, MIN_cri);
 
