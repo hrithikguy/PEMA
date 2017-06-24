@@ -254,9 +254,10 @@ int Cluster::output(vector< vector <double> >  seq2d) {
 
 	long i,j;
 	  cout<<endl<<"//Results based on model selection:"<<endl;
-	  if(vec_SelectedModels.size()==0){
+	  if(flag_found_cluster == 0){
 	    cout<<"Note: No clusters are found in the sequence!"<<endl;
 	    cout<<"There are not enough variants!"<<endl;
+	    return 1;
 	  }
 
 	for(i=0; i<vec_SelectedModels.size(); i++) {
@@ -432,7 +433,7 @@ double BIC0 = -2*InL0 + 0*log(double(X_size * Y_size));
 
 	//cout << "bp2" << endl;
 
-
+  	long smallest_j= 0;
 	for (x_cs = x_pos_start; x_cs <= x_pos_end; ++x_cs) {
 			//cout << "bp3" << endl;
 
@@ -506,6 +507,7 @@ double BIC0 = -2*InL0 + 0*log(double(X_size * Y_size));
 					  //cout<<"cri="<<cri<<";"<<pos_start<<";"<<pos_end<<";"<<cs<<";"<<ce<<";"<<p0<<";"<<pc<<endl;
 			  		if (MIN_cri > cri){
 				    	MIN_cri = cri;
+				    	smallest_j = (long) vec_AllModelsFull.size();
 				  	}
 
 
@@ -619,20 +621,20 @@ double BIC0 = -2*InL0 + 0*log(double(X_size * Y_size));
 
 	  	//cout << "bp5" << endl;
 
- 	long smallest_j=0;
-  double smallest_cri=100000;
-  for(long j=0;j<vec_AllModelsFull.size();j++){
-	if(criterion_type==0 && vec_AllModelsFull[j].BIC < smallest_cri && vec_AllModelsFull[j].BIC != BIC){
-	  smallest_cri=vec_AllModelsFull[j].BIC;
-	  smallest_j=j;
-	}else if (criterion_type==1 && vec_AllModelsFull[j].AIC < smallest_cri && vec_AllModelsFull[j].AIC != AIC){
-	  smallest_cri=vec_AllModelsFull[j].AIC;
-	  smallest_j=j;
-	}else if (criterion_type==2 && vec_AllModelsFull[j].AICc < smallest_cri && vec_AllModelsFull[j].AICc != AICc){
-              smallest_cri=vec_AllModelsFull[j].AICc;
-              smallest_j=j;
-	} 
-  }
+ // 	long smallest_j=0;
+ //  double smallest_cri=100000;
+ //  for(long j=0;j<vec_AllModelsFull.size();j++){
+	// if(criterion_type==0 && vec_AllModelsFull[j].BIC < smallest_cri && vec_AllModelsFull[j].BIC != BIC){
+	//   smallest_cri=vec_AllModelsFull[j].BIC;
+	//   smallest_j=j;
+	// }else if (criterion_type==1 && vec_AllModelsFull[j].AIC < smallest_cri && vec_AllModelsFull[j].AIC != AIC){
+	//   smallest_cri=vec_AllModelsFull[j].AIC;
+	//   smallest_j=j;
+	// }else if (criterion_type==2 && vec_AllModelsFull[j].AICc < smallest_cri && vec_AllModelsFull[j].AICc != AICc){
+ //              smallest_cri=vec_AllModelsFull[j].AICc;
+ //              smallest_j=j;
+	// } 
+ //  }
   	      	//cout << "bp4.2" << endl;
 
   	      	cout << vec_AllModelsFull.size() << endl;
